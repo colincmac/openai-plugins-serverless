@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "ArchitectureShowcase.OpenAI.HttpSurface": {
+        "commandName": "Project",
+        "commandLineArgs": "--port 7170 --useHttps --cert certificate.pfx --password password"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "httpPort": 31506,
+      "useSSL": false
+    }
+  }
+}

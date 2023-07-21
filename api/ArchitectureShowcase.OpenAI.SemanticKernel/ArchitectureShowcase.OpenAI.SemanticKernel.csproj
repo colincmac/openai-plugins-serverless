@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.5.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.35.1" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="0.17.230711.7-preview" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Memory.AzureCognitiveSearch" Version="0.17.230711.7-preview" />
+    <PackageReference Include="Azure.Identity" Version="1.9.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Skills.Document" Version="0.17.230711.7-preview" />
+    <PackageReference Include="Microsoft.SemanticKernel.Skills.MsGraph" Version="0.17.230711.7-preview" />
+    <PackageReference Include="Microsoft.SemanticKernel.Skills.Web" Version="0.17.230711.7-preview" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Polly" Version="7.2.4" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="2.13.0" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.2.2" />
+    <PackageReference Include="Microsoft.SemanticKernel.Skills.OpenAPI" Version="0.17.230711.7-preview" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Memory.Qdrant" Version="0.17.230711.7-preview" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Plugins\EnterprisePublicDocuments\" />
+    <Folder Include="Plugins\FinancialDocuments\" />
+    <Folder Include="Plugins\DeveloperCopilot\" />
+    <Folder Include="Plugins\DocumentManagement\" />
+    <Folder Include="Plugins\ConversationCoPilot\" />
+    <Folder Include="Plugins\FinancialRelevancy\" />
+    <Folder Include="Plugins\SemanticChatMemory\" />
+    <Folder Include="Plugins\ProactiveAssistance\" />
+  </ItemGroup>
+
+</Project>
