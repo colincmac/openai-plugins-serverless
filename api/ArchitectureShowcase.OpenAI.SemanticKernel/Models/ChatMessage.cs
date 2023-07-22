@@ -58,7 +58,7 @@ public class ChatMessage : IStoredEntity
 	/// Timestamp of the message.
 	/// </summary>
 	[JsonPropertyName("timestamp")]
-	public long Timestamp { get; set; }
+	public DateTimeOffset Timestamp { get; set; }
 
 	/// <summary>
 	/// Id of the user who sent this message.
@@ -119,17 +119,24 @@ public class ChatMessage : IStoredEntity
 	/// <param name="prompt">The prompt used to generate the message</param>
 	/// <param name="authorRole">Role of the author</param>
 	/// <param name="type">Type of the message</param>
-	public ChatMessage(string userId, string userName, string chatId, string content, string prompt = "", AuthorRoles authorRole = AuthorRoles.User, ChatMessageType type = ChatMessageType.Message)
+	public ChatMessage(
+		string userId,
+		string userName,
+		string chatId,
+		string content,
+		string prompt = "",
+		AuthorRoles authorRole = AuthorRoles.User,
+		ChatMessageType type = ChatMessageType.Message)
 	{
-		Timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-		UserId = userId;
-		UserName = userName;
-		ChatId = chatId;
-		Content = content;
-		Id = Guid.NewGuid().ToString();
-		Prompt = prompt;
-		AuthorRole = authorRole;
-		Type = type;
+		this.Timestamp = DateTimeOffset.Now;
+		this.UserId = userId;
+		this.UserName = userName;
+		this.ChatId = chatId;
+		this.Content = content;
+		this.Id = Guid.NewGuid().ToString();
+		this.Prompt = prompt;
+		this.AuthorRole = authorRole;
+		this.Type = type;
 	}
 
 	/// <summary>
@@ -144,19 +151,31 @@ public class ChatMessage : IStoredEntity
 	}
 
 	/// <summary>
+	/// Create a new chat message for a document upload.
+	/// </summary>
+	/// <param name="userId">The user ID that uploaded the document</param>
+	/// <param name="userName">The user name that uploaded the document</param>
+	/// <param name="chatId">The chat ID that this message belongs to</param>
+	/// <param name="documentMessageContent">The document message content</param>
+	public static ChatMessage CreateDocumentMessage(string userId, string userName, string chatId, DocumentMessageContent documentMessageContent)
+	{
+		return new ChatMessage(userId, userName, chatId, documentMessageContent.ToString(), string.Empty, AuthorRoles.User, ChatMessageType.Document);
+	}
+
+	/// <summary>
 	/// Serialize the object to a formatted string.
 	/// </summary>
 	/// <returns>A formatted string</returns>
 	public string ToFormattedString()
 	{
-		var content = Content;
-		if (Type == ChatMessageType.Document)
+		var content = this.Content;
+		if (this.Type == ChatMessageType.Document)
 		{
-			var documentDetails = DocumentMessageContent.FromString(content);
-			content = $"Sent a file named \"{documentDetails?.Name}\" with a size of {documentDetails?.Size}.";
+			var documentMessageContent = DocumentMessageContent.FromString(content);
+			content = (documentMessageContent != null) ? documentMessageContent.ToFormattedString() : "Uploaded documents";
 		}
 
-		return $"[{Timestamp.ToString("G", CultureInfo.CurrentCulture)}] {UserName}: {content}";
+		return $"[{this.Timestamp.ToString("G", CultureInfo.CurrentCulture)}] {this.UserName}: {content}";
 	}
 
 	/// <summary>

@@ -21,7 +21,7 @@ public class DocumentImportForm
 	/// <summary>
 	/// The file to import.
 	/// </summary>
-	public IFormFile? FormFile { get; set; }
+	public IEnumerable<IFormFile> FormFiles { get; set; } = Enumerable.Empty<IFormFile>();
 
 	/// <summary>
 	/// Scope of the document. This determines the collection name in the document memory.

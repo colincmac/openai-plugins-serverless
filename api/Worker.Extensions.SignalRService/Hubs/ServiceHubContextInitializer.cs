@@ -58,7 +58,7 @@ internal class ServiceHubContextInitializer<THub> : IHostedService
 			.WithCallingAssembly()
 			.AddUserAgent($" [{Constants.FunctionsWorkerProductInfoKey}={Constants.DotnetIsolatedWorker}");
 		_configure?.Invoke(serviceManagerBuilder);
-		var serviceManager = serviceManagerBuilder.BuildServiceManager();
-		return serviceManager;
+
+		return serviceManagerBuilder.BuildServiceManager();
 	}
 }

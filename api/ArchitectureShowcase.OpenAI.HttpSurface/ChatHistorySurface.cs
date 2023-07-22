@@ -1,22 +1,25 @@
 ﻿using ArchitectureShowcase.OpenAI.HttpSurface.Models;
+using ArchitectureShowcase.OpenAI.HttpSurface.TypedHubClients;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Options;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Functions.Worker.SignalRService;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
 using System.Net;
 using System.Web.Http;
 
 namespace ArchitectureShowcase.OpenAI.HttpSurface;
-public class ChatHistorySurface
+
+public class ChatHistorySurface : ServerlessHub<IChatHistoryClient>
 {
 	private readonly ChatSessionRepository _sessionRepository;
 	private readonly ChatMessageRepository _messageRepository;
 	private readonly PromptsOptions _promptOptions;
 	private readonly ChatMemorySourceRepository _sourceRepository;
-	public ChatHistorySurface(ChatSessionRepository sessionRepository, ChatMessageRepository messageRepository, ChatMemorySourceRepository sourceRepository, IOptions<PromptsOptions> promptOptions)
+	public ChatHistorySurface(IServiceProvider serviceProvider, ChatSessionRepository sessionRepository, ChatMessageRepository messageRepository, ChatMemorySourceRepository sourceRepository, IOptions<PromptsOptions> promptOptions) : base(serviceProvider)
 	{
 		_sessionRepository = sessionRepository;
 		_messageRepository = messageRepository;
@@ -180,6 +183,70 @@ public class ChatHistorySurface
 		//}
 
 		return new OkObjectResult(chatMessages);
+	}
+
+	[Function("EditChatSession")]
+	[OpenApiOperation(operationId: "EditChatSession", tags: new[] { "chatSession" }, Summary = "Edit Chat Session metadata.", Description = "Edit the chat sessions name and other values.")]
+	[OpenApiParameter(name: "chatSessionId", In = ParameterLocation.Path, Required = true, Type = typeof(string), Description = "The chat session id.")]
+	[OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(ChatSession), Summary = "The created chat session")]
+	[OpenApiResponseWithBody(statusCode: HttpStatusCode.BadRequest, contentType: "application/json", bodyType: typeof(ProblemDetails), Summary = "Invalid request")]
+	[OpenApiResponseWithBody(statusCode: HttpStatusCode.NotFound, contentType: "application/json", bodyType: typeof(ProblemDetails), Summary = "Resource not found")]
+	[OpenApiRequestBody(contentType: "application/json", bodyType: typeof(ChatSession), Required = true, Description = "The chat session parameters")]
+	public async Task<IActionResult> EditChatSession(
+		[HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "chatSession/{chatSessionId:guid}")] HttpRequest req,
+		string chatSessionId,
+		FunctionContext executionContext)
+	{
+		var (isAuthenticated, authenticationResponse) =
+		   await req.HttpContext.AuthenticateAzureFunctionAsync();
+
+		var userId = req.HttpContext.User.GetObjectId();
+
+		if (!isAuthenticated || string.IsNullOrEmpty(userId))
+			return authenticationResponse ?? new UnauthorizedResult();
+
+		var chatParameters = await req.ReadFromJsonAsync<ChatSession>();
+		if (chatParameters == null)
+		{
+			return new BadRequestObjectResult($"No chat parameters found for chat id '{chatSessionId}'.");
+		}
+
+		ChatSession? chat = null;
+		if (!await _sessionRepository.TryFindByIdAsync(chatSessionId, v => chat = v))
+		{
+			return new NotFoundObjectResult($"No chat found for chat id '{chatSessionId}'.");
+		}
+
+		chat!.Title = chatParameters.Title;
+		await _sessionRepository.UpsertAsync(chat);
+		await Clients.Group(chatSessionId).ChatEdited(chat);
+		return new OkObjectResult(chat);
+	}
+
+	[Function("GetChatSessionSources")]
+	public async Task<IActionResult> GetSourcesAsync(
+	[HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "chatSession/{chatSessionId:guid}/sources")] HttpRequest req,
+	Guid chatSessionId,
+	FunctionContext executionContext)
+	{
+		var (isAuthenticated, authenticationResponse) = await req.HttpContext.AuthenticateAzureFunctionAsync();
+
+		var userId = req.HttpContext.User.GetObjectId();
+
+		if (!isAuthenticated || string.IsNullOrEmpty(userId))
+			return authenticationResponse ?? new UnauthorizedResult();
+
+		var log = executionContext.GetLogger<ChatHistorySurface>();
+
+		log.LogInformation("Get imported sources of chat session {0}", chatSessionId);
+
+		if (await this._sessionRepository.TryFindByIdAsync(chatSessionId.ToString(), v => _ = v))
+		{
+			var sources = await this._sourceRepository.FindByChatIdAsync(chatSessionId.ToString());
+			return new OkObjectResult(sources);
+		}
+
+		return new NotFoundObjectResult($"No chat session found for chat id '{chatSessionId}'.");
 	}
 
 	/// <summary>

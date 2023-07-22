@@ -16,11 +16,8 @@ var host = new HostBuilder()
 	{
 		var configuration = host.Configuration;
 		services.AddApplicationInsightsTelemetryWorkerService();
-		services.AddServerlessHub<ChatHub>(builder =>
-		{
-			builder.WithOptions(opt => opt.UseJsonObjectSerializer(new JsonObjectSerializer(new(JsonSerializerDefaults.Web))));
-		});
-
+		services.AddServerlessHub<ChatSurface>(builder => builder.WithOptions(opt => opt.UseJsonObjectSerializer(new JsonObjectSerializer(new(JsonSerializerDefaults.Web)))));
+		services.AddServerlessHub<ChatHistorySurface>(builder => builder.WithOptions(opt => opt.UseJsonObjectSerializer(new JsonObjectSerializer(new(JsonSerializerDefaults.Web)))));
 
 		services
 		.AddAIServiceOptions(configuration)

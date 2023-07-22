@@ -1,4 +1,5 @@
-﻿using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
+﻿using ArchitectureShowcase.OpenAI.HttpSurface.TypedHubClients;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Storage;
 using Azure.Core.Serialization;
 using Microsoft.AspNetCore.Http;
@@ -13,19 +14,9 @@ using System.Text.Json;
 
 namespace ArchitectureShowcase.OpenAI.HttpSurface;
 
-public interface IChatClient
-{
-	Task ReceiveMessage(ChatMessage message, string chatId);
-	Task ReceiveResponse(AskResult askResult, string chatId);
 
-	Task UserJoined(string chatId, string userId);
-	Task ReceiveUserTypingState(string chatId, string userId, bool isTyping);
-	Task ReceiveBotTypingState(string chatId, bool isTyping);
-	Task ChatDocumentUploaded(ChatMessage message, string chatId);
-	Task GlobalDocumentUploaded(string fileNames, string username);
-}
 
-public class ChatHub : ServerlessHub<IChatClient>
+public class ChatSurface : ServerlessHub<IChatClient>
 {
 	private const string ChatSkillName = "ChatPlugin";
 	private const string ChatFunction = "Chat";
@@ -35,7 +26,7 @@ public class ChatHub : ServerlessHub<IChatClient>
 	private readonly ChatSessionRepository _chatSessionRepository;
 	private readonly IKernel _semanticKernel;
 
-	public ChatHub(IServiceProvider serviceProvider, ChatParticipantRepository chatParticipantRepository, ChatSessionRepository chatSessionRepository, IKernel semanticKernel) : base(serviceProvider)
+	public ChatSurface(IServiceProvider serviceProvider, ChatParticipantRepository chatParticipantRepository, ChatSessionRepository chatSessionRepository, IKernel semanticKernel) : base(serviceProvider)
 	{
 		_chatParticipantRepository = chatParticipantRepository;
 		_chatSessionRepository = chatSessionRepository;
@@ -165,8 +156,8 @@ public class ChatHub : ServerlessHub<IChatClient>
 	//}
 
 	[Function("AddClientToGroup")]
-	[SignalROutput(HubName = nameof(ChatHub))]
-	public Task AddClientToGroup([SignalRTrigger(nameof(ChatHub), "messages", "AddClientToGroup", "chatId")] SignalRInvocationContext invocationContext,
+	[SignalROutput(HubName = nameof(ChatSurface))]
+	public Task AddClientToGroup([SignalRTrigger(nameof(ChatSurface), "messages", "AddClientToGroup", "chatId")] SignalRInvocationContext invocationContext,
 		string chatId,
 		FunctionContext functionContext)
 	{
@@ -174,7 +165,7 @@ public class ChatHub : ServerlessHub<IChatClient>
 	}
 
 	[Function("SendUserTypingState")]
-	public Task SendUserTypingState([SignalRTrigger(nameof(ChatHub), "messages", "SendUserTypingState", "chatId", "userId", "isTyping")] SignalRInvocationContext invocationContext,
+	public Task SendUserTypingState([SignalRTrigger(nameof(ChatSurface), "messages", "SendUserTypingState", "chatId", "userId", "isTyping")] SignalRInvocationContext invocationContext,
 		string chatId,
 		string userId,
 		bool isTyping,
@@ -184,7 +175,7 @@ public class ChatHub : ServerlessHub<IChatClient>
 	}
 
 	[Function("SendMessage")]
-	public Task SendMessage([SignalRTrigger(nameof(ChatHub), "messages", "SendMessage", "chatId", "message")] SignalRInvocationContext invocationContext,
+	public Task SendMessage([SignalRTrigger(nameof(ChatSurface), "messages", "SendMessage", "chatId", "message")] SignalRInvocationContext invocationContext,
 		string chatId,
 		ChatMessage message,
 		FunctionContext functionContext)

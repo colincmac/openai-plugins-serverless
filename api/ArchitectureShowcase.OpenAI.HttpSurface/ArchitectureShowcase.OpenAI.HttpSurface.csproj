@@ -16,9 +16,10 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.CosmosDB" Version="4.3.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.DurableTask" Version="1.0.2" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.OpenApi" Version="2.0.0-preview2" />
-    <!--<PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.SignalRService" Version="1.10.0" />-->
+    <PackageReference Include="PdfPig" Version="0.1.8" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.12.0" />
     <PackageReference Include="Microsoft.Azure.SignalR.Management" Version="1.21.4" />
+    <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.30.0" />
 
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="1.0.0-preview2" />
@@ -47,4 +48,5 @@
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
+  <ProjectExtensions><VisualStudio><UserProperties example_1settings_1json__JsonSchema="https://json.schemastore.org/local.settings.json" /></VisualStudio></ProjectExtensions>
 </Project>

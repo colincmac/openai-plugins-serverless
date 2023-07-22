@@ -79,8 +79,8 @@ export class ChatService extends BaseService {
 
         const result = await this.getResponseAsync<IChatSession>(
             {
-                commandPath: 'chatSession/edit',
-                method: 'POST',
+                commandPath: `chatSession/${chatId}`,
+                method: 'PATCH',
                 body,
             },
             accessToken,

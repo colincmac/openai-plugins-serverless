@@ -22,7 +22,7 @@ export class DocumentImportService extends BaseService {
 
         return await this.getResponseAsync<IChatMessage>(
             {
-                commandPath: 'importDocuments',
+                commandPath: 'document',
                 method: 'POST',
                 body: formData,
             },

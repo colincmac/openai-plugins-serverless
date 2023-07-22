@@ -12,10 +12,18 @@ public sealed class AzureSpeechOptions
 	/// <summary>
 	/// Location of the Azure speech service to use (e.g. "South Central US")
 	/// </summary>
-	public string? Region { get; set; } = string.Empty;
+	public string Region { get; set; } = string.Empty;
 
 	/// <summary>
 	/// Key to access the Azure speech service.
 	/// </summary>
-	public string? Key { get; set; } = string.Empty;
+	public string Key { get; set; } = string.Empty;
+
+	private string SpeechTokenEndpoint => $"https://{Region}.api.cognitive.microsoft.com/sts/v1.0/issueToken";
+	public HttpRequestMessage GetSpeechTokenRequest()
+	{
+		var request = new HttpRequestMessage(HttpMethod.Post, SpeechTokenEndpoint);
+		request.Headers.Add("Ocp-Apim-Subscription-Key", Key);
+		return request;
+	}
 }
