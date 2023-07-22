@@ -5,6 +5,7 @@ import { AlertType } from '../../../libs/models/AlertType';
 export interface AppState {
     alerts: Alert[];
     activeUserInfo?: ActiveUserInfo;
+    signalRConnected: boolean;
 }
 
 export interface ActiveUserInfo {

@@ -14,7 +14,7 @@ import { useChat } from './libs/useChat';
 import { useAppDispatch, useAppSelector } from './redux/app/hooks';
 import { RootState, store } from './redux/app/store';
 import { addAlert, setActiveUserInfo } from './redux/features/app/appSlice';
-import { registerSignalREvents, startSignalRConnection } from './redux/features/message-relay/signalRMiddleware';
+import { startSignalRConnection } from './redux/features/message-relay/signalRMiddleware';
 
 export const useClasses = makeStyles({
     container: {
@@ -60,47 +60,39 @@ const App: FC = () => {
     const dispatch = useAppDispatch();
 
     const { instance, inProgress } = useMsal();
-    const { activeUserInfo } = useAppSelector((state: RootState) => state.app);
+    const { activeUserInfo, signalRConnected } = useAppSelector((state: RootState) => state.app);
     const isAuthenticated = useIsAuthenticated();
 
     const chat = useChat();
 
     useEffect(() => {
-        if (isAuthenticated) {
-            let isActiveUserInfoSet = activeUserInfo !== undefined;
-            if (!isActiveUserInfoSet) {
-                const account = instance.getActiveAccount();
-                if (!account) {
-                    dispatch(addAlert({ type: AlertType.Error, message: 'Unable to get active logged in account.' }));
-                } else {
-                    dispatch(
-                        setActiveUserInfo({
-                            id: account.homeAccountId,
-                            email: account.username, // username in an AccountInfo object is the email address
-                            username: account.name ?? account.username,
-                        }),
-                    );
-                // Start the signalR connection to make sure messages are
-                // sent to all clients and received by all clients
-                registerSignalREvents(store);
-                startSignalRConnection(store);
+        if(!isAuthenticated) return;
+        if(!signalRConnected) startSignalRConnection(store);
+        if (activeUserInfo === undefined) {
+            const account = instance.getActiveAccount();
+            if (!account) {
+                dispatch(addAlert({ type: AlertType.Error, message: 'Unable to get active logged in account.' }));
+            } else {
+                dispatch(
+                    setActiveUserInfo({
+                        id: account.homeAccountId,
+                        email: account.username, // username in an AccountInfo object is the email address
+                        username: account.name ?? account.username,
+                    }),
+                );
+            }     
+        }       
+
+        if (signalRConnected && appState === AppState.LoadingChats) {
+            // Load all chats from memory
+            void chat.loadChats().then((succeeded) => {
+                if (succeeded) {
+                    setAppState(AppState.Chat);
                 }
-
-                isActiveUserInfoSet = true;
-            }
-
-            if (appState === AppState.LoadingChats) {
-                // Load all chats from memory
-                void chat.loadChats().then((succeeded) => {
-                    if (succeeded) {
-                        setAppState(AppState.Chat);
-                    }
-                });
-            }
+            });
         }
-
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [instance, inProgress, isAuthenticated, appState]);
+    }, [instance, inProgress, isAuthenticated, appState, signalRConnected]);
 
     // TODO: handle error case of missing account information
     return (
@@ -144,3 +136,5 @@ const App: FC = () => {
 };
 
 export default App;
+
+

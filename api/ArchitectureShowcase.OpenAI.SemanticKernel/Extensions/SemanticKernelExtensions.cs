@@ -23,6 +23,11 @@ public static class SemanticKernelExtensions
 	public delegate Task RegisterSkillsWithKernel(IServiceProvider sp, IKernel kernel);
 
 	/// <summary>
+	/// Delegate to register skills with a Copilot Planner
+	/// </summary>
+	public delegate Task RegisterSkillsWithPlannerKernel(IServiceProvider sp, IKernel kernel);
+
+	/// <summary>
 	/// Add Semantic Kernel services
 	/// </summary>
 	public static IServiceCollection AddSemanticKernelServices(this IServiceCollection services)
@@ -45,7 +50,7 @@ public static class SemanticKernelExtensions
 		services.AddSemanticTextMemory();
 
 		// Register skills
-		services.AddScoped<RegisterSkillsWithKernel>(sp => RegisterSkillsAsync);
+		services.AddScoped<RegisterSkillsWithKernel>(sp => RegisterKernelPluginsAsync);
 
 		return services;
 	}
@@ -55,19 +60,17 @@ public static class SemanticKernelExtensions
 	/// </summary>
 	public static IServiceCollection AddCopilotChatPlannerServices(this IServiceCollection services)
 	{
-		var plannerOptions = services.BuildServiceProvider().GetService<IOptions<PlannerOptions>>();
-		services.AddScoped<ChatPlanner>(sp =>
+		services.AddScoped(sp =>
 		{
 			var plannerKernel = Kernel.Builder
 				.WithLogger(sp.GetRequiredService<ILogger<IKernel>>())
-				// TODO verify planner has AI service configured
 				.WithPlannerBackend(sp.GetRequiredService<IOptions<AIServiceOptions>>().Value)
 				.Build();
-			return new ChatPlanner(plannerKernel, plannerOptions?.Value);
-		});
 
-		// Register Planner skills (AI plugins) here.
-		// TODO: Move planner skill registration from ChatController to here.
+			sp.GetRequiredService<RegisterSkillsWithPlannerKernel>()(sp, plannerKernel);
+			return new ChatPlanner(plannerKernel, sp.GetRequiredService<IOptions<PlannerOptions>>().Value);
+		});
+		services.AddScoped<RegisterSkillsWithPlannerKernel>(sp => RegisterPlannerPlugins);
 
 		return services;
 	}
@@ -76,9 +79,9 @@ public static class SemanticKernelExtensions
 	/// <summary>
 	/// Register the skills with the kernel.
 	/// </summary>
-	private static Task RegisterSkillsAsync(IServiceProvider sp, IKernel kernel)
+	private static Task RegisterKernelPluginsAsync(IServiceProvider sp, IKernel kernel)
 	{
-		kernel.RegisterCopilotChatSkills(sp);
+		kernel.RegisterCopilotChatPlugins(sp);
 
 		kernel.ImportSkill(new TimeSkill(), nameof(TimeSkill));
 
@@ -105,7 +108,7 @@ public static class SemanticKernelExtensions
 	/// <summary>
 	/// Register the Copilot chat skills with the kernel.
 	/// </summary>
-	public static IKernel RegisterCopilotChatSkills(this IKernel kernel, IServiceProvider sp)
+	public static IKernel RegisterCopilotChatPlugins(this IKernel kernel, IServiceProvider sp)
 	{
 		// Chat skill
 		kernel.ImportSkill(new ChatPlugin(
@@ -119,6 +122,17 @@ public static class SemanticKernelExtensions
 			nameof(ChatPlugin));
 
 		return kernel;
+	}
+
+
+	/// <summary>
+	/// Register skills with the planner's kernel.
+	/// </summary>
+	private static Task RegisterPlannerPlugins(IServiceProvider sp, IKernel plannerKernel)
+	{
+		// TODO Can't seem to get the auth headers through FunctionContext or HttpContextAccessor without a hacky solution https://github.com/Azure/azure-functions-dotnet-worker/issues/950
+		// It's possible that a functions middleware could register a service before invocation though
+		return Task.CompletedTask;
 	}
 
 	/// <summary>
@@ -255,4 +269,5 @@ public static class SemanticKernelExtensions
 			_ => throw new ArgumentException($"Invalid {nameof(options.Type)} value in '{AIServiceOptions.PropertyName}' settings."),
 		};
 	}
+
 }

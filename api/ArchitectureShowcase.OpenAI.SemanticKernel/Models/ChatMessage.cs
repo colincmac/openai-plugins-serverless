@@ -58,7 +58,7 @@ public class ChatMessage : IStoredEntity
 	/// Timestamp of the message.
 	/// </summary>
 	[JsonPropertyName("timestamp")]
-	public DateTimeOffset Timestamp { get; set; }
+	public long Timestamp { get; set; }
 
 	/// <summary>
 	/// Id of the user who sent this message.
@@ -128,7 +128,7 @@ public class ChatMessage : IStoredEntity
 		AuthorRoles authorRole = AuthorRoles.User,
 		ChatMessageType type = ChatMessageType.Message)
 	{
-		this.Timestamp = DateTimeOffset.Now;
+		this.Timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 		this.UserId = userId;
 		this.UserName = userName;
 		this.ChatId = chatId;

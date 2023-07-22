@@ -88,7 +88,7 @@ public class ChatPlugin
 	/// <param name="context">The SKContext.</param>
 	[SKFunction, Description("Extract user intent")]
 	[SKParameter("chatId", "Chat ID to extract history from")]
-	[SKParameter("audience", "The audience the chat bot is interacting with.")]
+	[SKParameter("audience", "The audience the chat bot is interacting with")]
 	public async Task<string> ExtractUserIntentAsync(SKContext context)
 	{
 		var tokenLimit = _promptOptions.CompletionTokenLimit;
@@ -105,8 +105,8 @@ public class ChatPlugin
 
 		// Clone the context to avoid modifying the original context variables.
 		var intentExtractionContext = PluginUtilities.CopyContextWithVariablesClone(context);
-		intentExtractionContext.Variables.Set("tokenLimit", historyTokenBudget.ToString(new NumberFormatInfo()));
-		intentExtractionContext.Variables.Set("knowledgeCutoff", _promptOptions.KnowledgeCutoffDate);
+		intentExtractionContext.Variables.Set(SemanticContextConstants.TokenLimitKey, historyTokenBudget.ToString(new NumberFormatInfo()));
+		intentExtractionContext.Variables.Set(SemanticContextConstants.KnowledgeCutoffKey, _promptOptions.KnowledgeCutoffDate);
 
 		var completionFunction = _kernel.CreateSemanticFunction(
 			_promptOptions.SystemIntentExtraction,
@@ -149,7 +149,7 @@ public class ChatPlugin
 
 		// Clone the context to avoid modifying the original context variables.
 		var audienceExtractionContext = PluginUtilities.CopyContextWithVariablesClone(context);
-		audienceExtractionContext.Variables.Set("tokenLimit", historyTokenBudget.ToString(new NumberFormatInfo()));
+		audienceExtractionContext.Variables.Set(SemanticContextConstants.TokenLimitKey, historyTokenBudget.ToString(new NumberFormatInfo()));
 
 		var completionFunction = _kernel.CreateSemanticFunction(
 			_promptOptions.SystemAudienceExtraction,
@@ -245,7 +245,7 @@ public class ChatPlugin
 
 		// Clone the context to avoid modifying the original context variables.
 		var chatContext = PluginUtilities.CopyContextWithVariablesClone(context);
-		chatContext.Variables.Set("knowledgeCutoff", _promptOptions.KnowledgeCutoffDate);
+		chatContext.Variables.Set(SemanticContextConstants.KnowledgeCutoffKey, _promptOptions.KnowledgeCutoffDate);
 
 		// Check if plan exists in ask's context variables.
 		// If plan was returned at this point, that means it was approved or cancelled.
@@ -256,7 +256,7 @@ public class ChatPlugin
 			await UpdateResponseAsync(planJson, messageId);
 		}
 
-		var response = chatContext.Variables.ContainsKey("userCancelledPlan")
+		var response = chatContext.Variables.ContainsKey(SemanticContextConstants.UserCancelledPlanKey)
 			? "I am sorry the plan did not meet your goals."
 			: await GetChatResponseAsync(chatId, chatContext);
 
@@ -268,14 +268,14 @@ public class ChatPlugin
 
 		// Retrieve the prompt used to generate the response
 		// and return it to the caller via the context variables.
-		chatContext.Variables.TryGetValue("prompt", out var prompt);
+		chatContext.Variables.TryGetValue(SemanticContextConstants.PromptKey, out var prompt);
 		prompt ??= string.Empty;
-		context.Variables.Set("prompt", prompt);
+		context.Variables.Set(SemanticContextConstants.PromptKey, prompt);
 
 		// Save this response to memory such that subsequent chat responses can use it
 		var botMessage = await SaveNewResponseAsync(response, prompt, chatId);
-		context.Variables.Set("messageId", botMessage.Id);
-		context.Variables.Set("messageType", ((int)botMessage.Type).ToString(CultureInfo.InvariantCulture));
+		context.Variables.Set(SemanticContextConstants.MessageIdKey, botMessage.Id);
+		context.Variables.Set(SemanticContextConstants.MessageTypeKey, ((int)botMessage.Type).ToString(CultureInfo.InvariantCulture));
 
 		// Extract semantic chat memory
 		await SemanticChatMemoryExtractor.ExtractSemanticChatMemoryAsync(
@@ -379,7 +379,7 @@ public class ChatPlugin
 		);
 
 		// Allow the caller to view the prompt used to generate the response
-		chatContext.Variables.Set("prompt", renderedPrompt);
+		chatContext.Variables.Set(SemanticContextConstants.PromptKey, renderedPrompt);
 
 		if (chatContext.ErrorOccurred)
 		{
@@ -396,7 +396,7 @@ public class ChatPlugin
 	private async Task<string> GetAudienceAsync(SKContext context)
 	{
 		var contextVariables = new ContextVariables();
-		contextVariables.Set("chatId", context["chatId"]);
+		contextVariables.Set(SemanticContextConstants.ChatIdKey, context[SemanticContextConstants.ChatIdKey]);
 
 		var audienceContext = new SKContext(
 			contextVariables,
@@ -424,11 +424,11 @@ public class ChatPlugin
 	private async Task<string> GetUserIntentAsync(SKContext context)
 	{
 		// TODO: Regenerate user intent if plan was modified
-		if (!context.Variables.TryGetValue("planUserIntent", out var userIntent))
+		if (!context.Variables.TryGetValue(SemanticContextConstants.PlanUserIntentKey, out var userIntent))
 		{
 			var contextVariables = new ContextVariables();
-			contextVariables.Set("chatId", context["chatId"]);
-			contextVariables.Set("audience", context["userName"]);
+			contextVariables.Set(SemanticContextConstants.ChatIdKey, context[SemanticContextConstants.ChatIdKey]);
+			contextVariables.Set(SemanticContextConstants.AudienceKey, context[SemanticContextConstants.UserNameKey]);
 
 			var intentContext = new SKContext(
 				contextVariables,
@@ -455,7 +455,7 @@ public class ChatPlugin
 	/// </summary>
 	private Task<string> QueryChatMemoriesAsync(SKContext context, string userIntent, int tokenLimit)
 	{
-		return _semanticChatMemorySkill.QueryMemoriesAsync(userIntent, context["chatId"], tokenLimit, context.Memory);
+		return _semanticChatMemorySkill.QueryMemoriesAsync(userIntent, context[SemanticContextConstants.ChatIdKey], tokenLimit, context.Memory);
 	}
 
 	/// <summary>
@@ -464,7 +464,7 @@ public class ChatPlugin
 	/// </summary>
 	private Task<string> QueryDocumentsAsync(SKContext context, string userIntent, int tokenLimit)
 	{
-		return _documentMemorySkill.QueryDocumentsAsync(userIntent, context["chatId"], tokenLimit, context.Memory);
+		return _documentMemorySkill.QueryDocumentsAsync(userIntent, context[SemanticContextConstants.ChatIdKey], tokenLimit, context.Memory);
 	}
 
 	/// <summary>
@@ -473,7 +473,7 @@ public class ChatPlugin
 	private async Task<string> AcquireExternalInformationAsync(SKContext context, string userIntent, int tokenLimit)
 	{
 		var contextVariables = context.Variables.Clone();
-		contextVariables.Set("tokenLimit", tokenLimit.ToString(new NumberFormatInfo()));
+		contextVariables.Set(SemanticContextConstants.TokenLimitKey, tokenLimit.ToString(new NumberFormatInfo()));
 
 		var planContext = new SKContext(
 			contextVariables,
@@ -566,7 +566,7 @@ public class ChatPlugin
 	/// </summary>
 	private CompleteRequestSettings CreateChatResponseCompletionSettings()
 	{
-		var completionSettings = new CompleteRequestSettings
+		return new CompleteRequestSettings
 		{
 			MaxTokens = _promptOptions.ResponseTokenLimit,
 			Temperature = _promptOptions.ResponseTemperature,
@@ -574,8 +574,7 @@ public class ChatPlugin
 			FrequencyPenalty = _promptOptions.ResponseFrequencyPenalty,
 			PresencePenalty = _promptOptions.ResponsePresencePenalty
 		};
-
-		return completionSettings;
+		;
 	}
 
 	/// <summary>

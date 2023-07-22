@@ -12,6 +12,7 @@ const initialState: AppState = {
             type: AlertType.Info,
         },
     ],
+    signalRConnected: false,
 };
 
 export const appSlice = createSlice({
@@ -32,6 +33,9 @@ export const appSlice = createSlice({
         },
         setActiveUserInfo: (state: AppState, action: PayloadAction<ActiveUserInfo>) => {
             state.activeUserInfo = action.payload;
+        },
+        setSignalRConnectionState: (state: AppState, action: PayloadAction<boolean>) => {
+            state.signalRConnected = action.payload;
         },
     },
 });

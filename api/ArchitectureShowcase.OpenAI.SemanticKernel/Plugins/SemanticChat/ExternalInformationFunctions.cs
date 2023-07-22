@@ -17,7 +17,7 @@ using System.Text.RegularExpressions;
 namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
 
 /// <summary>
-/// This skill provides the functions to acquire external information.
+/// skill provides the functions to acquire external information.
 /// </summary>
 public class ExternalInformationFunctions
 {
@@ -53,8 +53,8 @@ public class ExternalInformationFunctions
 		IOptions<PromptsOptions> promptOptions,
 		ChatPlanner planner)
 	{
-		this._promptOptions = promptOptions.Value;
-		this._planner = planner;
+		_promptOptions = promptOptions.Value;
+		_planner = planner;
 	}
 
 	/// <summary>
@@ -67,14 +67,14 @@ public class ExternalInformationFunctions
 		[Description("The intent to whether external information is needed")] string userIntent,
 		SKContext context)
 	{
-		var functions = this._planner.Kernel.Skills.GetFunctionsView(true, true);
+		var functions = _planner.Kernel.Skills.GetFunctionsView(true, true);
 		if (functions.NativeFunctions.IsEmpty && functions.SemanticFunctions.IsEmpty)
 		{
 			return string.Empty;
 		}
 
 		// Check if plan exists in ask's context variables.
-		var planExists = context.Variables.TryGetValue("proposedPlan", out var proposedPlanJson);
+		var planExists = context.Variables.TryGetValue(SemanticContextConstants.ProposedPlanKey, out var proposedPlanJson);
 		var deserializedPlan = planExists && !string.IsNullOrWhiteSpace(proposedPlanJson) ? JsonSerializer.Deserialize<ProposedPlan>(proposedPlanJson) : null;
 
 		// Run plan if it was approved
@@ -85,25 +85,25 @@ public class ExternalInformationFunctions
 			// it has full context to be executed
 			var newPlanContext = new SKContext(
 				null,
-				this._planner.Kernel.Memory,
-				this._planner.Kernel.Skills,
-				this._planner.Kernel.Log
+				_planner.Kernel.Memory,
+				_planner.Kernel.Skills,
+				_planner.Kernel.Log
 			);
 			var plan = Plan.FromJson(planJson, newPlanContext);
 
 			// Invoke plan
 			newPlanContext = await plan.InvokeAsync(newPlanContext);
 			var tokenLimit =
-				int.Parse(context["tokenLimit"], new NumberFormatInfo()) -
+				int.Parse(context[SemanticContextConstants.TokenLimitKey], new NumberFormatInfo()) -
 				PluginUtilities.TokenCount(PromptPreamble) -
 				PluginUtilities.TokenCount(PromptPostamble);
 
 			// The result of the plan may be from an OpenAPI skill. Attempt to extract JSON from the response.
 			var extractJsonFromOpenApi =
-				this.TryExtractJsonFromOpenApiPlanResult(newPlanContext, newPlanContext.Result, out var planResult);
+				TryExtractJsonFromOpenApiPlanResult(newPlanContext, newPlanContext.Result, out var planResult);
 			if (extractJsonFromOpenApi)
 			{
-				planResult = this.OptimizeOpenApiSkillJson(planResult, tokenLimit, plan);
+				planResult = OptimizeOpenApiSkillJson(planResult, tokenLimit, plan);
 			}
 			else
 			{
@@ -116,20 +116,20 @@ public class ExternalInformationFunctions
 		else
 		{
 			// Create a plan and set it in context for approval.
-			var contextString = string.Join("\n", context.Variables.Where(v => v.Key != "userIntent").Select(v => $"{v.Key}: {v.Value}"));
-			var plan = await this._planner.CreatePlanAsync($"Given the following context, accomplish the user intent.\nContext:{contextString}\nUser Intent:{userIntent}");
+			var contextString = string.Join("\n", context.Variables.Where(v => v.Key != SemanticContextConstants.UserIntentKey).Select(v => $"{v.Key}: {v.Value}"));
+			var plan = await _planner.CreatePlanAsync($"Given the following context, accomplish the user intent.\nContext:{contextString}\nUser Intent:{userIntent}");
 
 			if (plan.Steps.Count > 0)
 			{
 				// Parameters stored in plan's top level
-				this.MergeContextIntoPlan(context.Variables, plan.Parameters);
+				MergeContextIntoPlan(context.Variables, plan.Parameters);
 
-				// TODO: Improve Kernel to give developers option to skip this override 
+				// TODO: Improve Kernel to give developers option to skip override 
 				// (i.e., keep functions regardless of whether they're available in the planner's context or not)
-				var sanitizedPlan = this.SanitizePlan(plan, context);
+				var sanitizedPlan = SanitizePlan(plan, context);
 				sanitizedPlan.Parameters.Update(plan.Parameters);
 
-				this.ProposedPlan = new ProposedPlan(sanitizedPlan, this._planner.PlannerOptions!.Type, PlanStateEnum.NoOp);
+				ProposedPlan = new ProposedPlan(sanitizedPlan, _planner.PlannerOptions.Type, PlanStateEnum.NoOp);
 			}
 		}
 
@@ -143,14 +143,15 @@ public class ExternalInformationFunctions
 	/// </summary>
 	private Plan SanitizePlan(Plan plan, SKContext context)
 	{
+		var authHeaders = context.Variables.Where(x => x.Key.StartsWith(SemanticContextConstants.PluginAuthHeaderPrefix)).ToList();
 		List<Plan> sanitizedSteps = new();
-		var availableFunctions = this._planner.Kernel.Skills.GetFunctionsView(true);
+		var availableFunctions = _planner.Kernel.Skills.GetFunctionsView(true);
 
 		foreach (var step in plan.Steps)
 		{
-			if (this._planner.Kernel.Skills.TryGetFunction(step.SkillName, step.Name, out var function))
+			if (_planner.Kernel.Skills.TryGetFunction(step.SkillName, step.Name, out var function))
 			{
-				this.MergeContextIntoPlan(context.Variables, step.Parameters);
+				MergeContextIntoPlan(context.Variables, step.Parameters);
 				sanitizedSteps.Add(step);
 			}
 		}
@@ -225,7 +226,7 @@ public class ExternalInformationFunctions
 
 		// The json will be deserialized based on the response type of the particular operation that was last invoked by the planner
 		// The response type can be a custom trimmed down json structure, which is useful in staying within the token limit
-		var skillResponseType = this.GetOpenApiSkillResponseType(ref document, ref lastSkillInvoked, ref trimSkillResponse);
+		var skillResponseType = GetOpenApiSkillResponseType(ref document, ref lastSkillInvoked, ref trimSkillResponse);
 
 		if (trimSkillResponse)
 		{
@@ -246,7 +247,7 @@ public class ExternalInformationFunctions
 		List<object> itemList = new();
 
 		// Some APIs will return a JSON response with one property key representing an embedded answer.
-		// Extract this value for further processing
+		// Extract value for further processing
 		var resultsDescriptor = "";
 
 		if (document.RootElement.ValueKind == JsonValueKind.Object)
@@ -312,7 +313,7 @@ public class ExternalInformationFunctions
 
 		return itemList.Count > 0
 			? string.Format(CultureInfo.InvariantCulture, "{0}{1}", resultsDescriptor, JsonSerializer.Serialize(itemList))
-			: string.Format(CultureInfo.InvariantCulture, "JSON response for {0} is too large to be consumed at this time.", lastSkillInvoked);
+			: string.Format(CultureInfo.InvariantCulture, "JSON response for {0} is too large to be consumed at time.", lastSkillInvoked);
 	}
 
 	private Type GetOpenApiSkillResponseType(ref JsonDocument document, ref string lastSkillInvoked, ref bool trimSkillResponse)
@@ -325,7 +326,7 @@ public class ExternalInformationFunctions
 		if (string.Equals(lastSkillInvoked, "GitHubSkill", StringComparison.Ordinal))
 		{
 			trimSkillResponse = true;
-			skillResponseType = this.GetGithubSkillResponseType(ref document);
+			skillResponseType = GetGithubSkillResponseType(ref document);
 		}
 
 		return skillResponseType;

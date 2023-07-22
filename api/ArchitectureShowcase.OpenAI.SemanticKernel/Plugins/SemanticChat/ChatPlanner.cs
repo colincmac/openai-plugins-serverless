@@ -17,18 +17,18 @@ public class ChatPlanner
 	/// <summary>
 	/// Options for the planner.
 	/// </summary>
-	private readonly PlannerOptions? _plannerOptions;
+	private readonly PlannerOptions _plannerOptions;
 
 	/// <summary>
 	/// Gets the pptions for the planner.
 	/// </summary>
-	public PlannerOptions? PlannerOptions => _plannerOptions;
+	public PlannerOptions PlannerOptions => _plannerOptions;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ChatPlanner"/> class.
 	/// </summary>
 	/// <param name="plannerKernel">The planner's kernel.</param>
-	public ChatPlanner(IKernel plannerKernel, PlannerOptions? plannerOptions)
+	public ChatPlanner(IKernel plannerKernel, PlannerOptions plannerOptions)
 	{
 		Kernel = plannerKernel;
 		_plannerOptions = plannerOptions;
@@ -42,6 +42,7 @@ public class ChatPlanner
 	public Task<Plan> CreatePlanAsync(string goal)
 	{
 		var plannerFunctionsView = Kernel.Skills.GetFunctionsView(true, true);
+
 		if (plannerFunctionsView.NativeFunctions.IsEmpty && plannerFunctionsView.SemanticFunctions.IsEmpty)
 		{
 			// No functions are available - return an empty plan.

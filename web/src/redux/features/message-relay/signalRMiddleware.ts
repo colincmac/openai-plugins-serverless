@@ -63,9 +63,11 @@ const setupSignalRConnectionToChatHub = () => {
 
     return hubConnection;
 };
+const hubConnection = setupSignalRConnectionToChatHub();
 
 
 const registerCommonSignalConnectionEvents = (store: Store) => {
+    
     // Re-establish the connection if connection dropped
     hubConnection.onclose((error) => {
         if (hubConnection.state === signalR.HubConnectionState.Disconnected) {
@@ -91,15 +93,17 @@ const registerCommonSignalConnectionEvents = (store: Store) => {
         }
     });
 };
-const hubConnection = setupSignalRConnectionToChatHub();
 
 export const startSignalRConnection = (store: Store) => {
+    if(hubConnection.state === signalR.HubConnectionState.Connected || hubConnection.state === signalR.HubConnectionState.Connecting) return;
     registerCommonSignalConnectionEvents(store);
     hubConnection
         .start()
         .then(() => {
             console.assert(hubConnection.state === signalR.HubConnectionState.Connected);
             console.log('SignalR connection established');
+            store.dispatch({ type: 'app/setSignalRConnectionState', payload: true });
+            registerSignalREvents(store)
         })
         .catch((err) => {
             console.assert(hubConnection.state === signalR.HubConnectionState.Disconnected);
@@ -150,9 +154,6 @@ export const signalRMiddleware = (store: StoreMiddlewareAPI) => {
 };
 
 export const registerSignalREvents = (store: Store) => {
-    hubConnection.on(SignalRCallbackMethods.ReceiveMessage, (message: IChatMessage, chatId: string) => {
-        store.dispatch({ type: 'conversations/updateConversationFromServer', payload: { message, chatId } });
-    });
 
     hubConnection.on(SignalRCallbackMethods.ReceiveResponse, (askResult: IAskResult, chatId: string) => {
         const loggedInUserId = store.getState().app.activeUserInfo?.id;

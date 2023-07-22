@@ -1,15 +1,24 @@
 ﻿using ArchitectureShowcase.OpenAI.HttpSurface.TypedHubClients;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Storage;
 using Azure.Core.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker.SignalRService;
+using Microsoft.Graph;
 using Microsoft.Identity.Web;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.AI;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.SemanticKernel.SkillDefinition;
+using Microsoft.SemanticKernel.Skills.MsGraph;
+using Microsoft.SemanticKernel.Skills.MsGraph.Connectors;
+using Microsoft.SemanticKernel.Skills.MsGraph.Connectors.Client;
+using Microsoft.SemanticKernel.Skills.OpenAPI.Authentication;
+using Microsoft.SemanticKernel.Skills.OpenAPI.Extensions;
+using System.Reflection;
 using System.Text.Json;
 
 namespace ArchitectureShowcase.OpenAI.HttpSurface;
@@ -25,12 +34,14 @@ public class ChatSurface : ServerlessHub<IChatClient>
 	private readonly ChatParticipantRepository _chatParticipantRepository;
 	private readonly ChatSessionRepository _chatSessionRepository;
 	private readonly IKernel _semanticKernel;
+	private readonly ChatPlanner _chatPlanner;
 
-	public ChatSurface(IServiceProvider serviceProvider, ChatParticipantRepository chatParticipantRepository, ChatSessionRepository chatSessionRepository, IKernel semanticKernel) : base(serviceProvider)
+	public ChatSurface(IServiceProvider serviceProvider, ChatParticipantRepository chatParticipantRepository, ChatSessionRepository chatSessionRepository, IKernel semanticKernel, ChatPlanner chatPlanner) : base(serviceProvider)
 	{
 		_chatParticipantRepository = chatParticipantRepository;
 		_chatSessionRepository = chatSessionRepository;
 		_semanticKernel = semanticKernel;
+		_chatPlanner = chatPlanner;
 	}
 
 	[Function("negotiate")]
@@ -82,6 +93,7 @@ public class ChatSurface : ServerlessHub<IChatClient>
 		[HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "chat")] HttpRequest req,
 		FunctionContext executionContext)
 	{
+		var log = executionContext.GetLogger<HealthSurface>();
 		var (isAuthenticated, authenticationResponse) = await req.HttpContext.AuthenticateAzureFunctionAsync();
 		var userId = req.HttpContext.User.GetObjectId();
 		if (!isAuthenticated || string.IsNullOrEmpty(userId))
@@ -92,7 +104,6 @@ public class ChatSurface : ServerlessHub<IChatClient>
 		if (ask is null)
 			return new BadRequestResult();
 
-
 		// Put ask's variables in the context we will use.
 		var contextVariables = new ContextVariables(ask.Input);
 		foreach (var input in ask.Variables)
@@ -100,7 +111,10 @@ public class ChatSurface : ServerlessHub<IChatClient>
 			contextVariables.Set(input.Key, input.Value);
 		}
 
-		// Get the function to invoke
+		var authHeaders = PluginAuthHeaders.FromHeaderDictionary(req.Headers);
+		await RegisterPlannerSkillsAsync(_chatPlanner, authHeaders, contextVariables, log);
+
+		// Get the ChatPlugin function to invoke
 		ISKFunction? function = null;
 		try
 		{
@@ -108,7 +122,7 @@ public class ChatSurface : ServerlessHub<IChatClient>
 		}
 		catch (KernelException ke)
 		{
-			executionContext.GetLogger<HealthSurface>().LogError("Failed to find {0}/{1} on server: {2}", ChatSkillName, ChatFunction, ke);
+			log.LogError("Failed to find {0}/{1} on server: {2}", ChatSkillName, ChatFunction, ke);
 
 			return new NotFoundObjectResult($"Failed to find {ChatSkillName}/{ChatFunction} on server");
 		}
@@ -183,4 +197,77 @@ public class ChatSurface : ServerlessHub<IChatClient>
 		return Clients.GroupExcept(chatId, new[] { invocationContext.ConnectionId }).ReceiveMessage(message, chatId);
 	}
 	#endregion
+
+	/// <summary>
+	/// Register skills with the planner's kernel.
+	/// </summary>
+	private async Task RegisterPlannerSkillsAsync(ChatPlanner planner, PluginAuthHeaders openApiSkillsAuthHeaders, ContextVariables variables, ILogger log)
+	{
+		// Register authenticated skills with the planner's kernel only if the request includes an auth header for the skill.
+
+		// Klarna Shopping
+		if (openApiSkillsAuthHeaders.KlarnaAuthentication != null)
+		{
+			// Register the Klarna shopping ChatGPT plugin with the planner's kernel. There is no authentication required for this plugin.
+			await planner.Kernel.ImportChatGptPluginSkillFromUrlAsync("KlarnaShoppingSkill", new Uri("https://www.klarna.com/.well-known/ai-plugin.json"), new OpenApiSkillExecutionParameters());
+		}
+
+		// GitHub
+		if (!string.IsNullOrWhiteSpace(openApiSkillsAuthHeaders.GithubAuthentication))
+		{
+			log.LogInformation("Enabling GitHub skill.");
+			BearerAuthenticationProvider authenticationProvider = new(() => Task.FromResult(openApiSkillsAuthHeaders.GithubAuthentication));
+			await planner.Kernel.ImportOpenApiSkillFromFileAsync(
+				skillName: "GitHubSkill",
+				filePath: Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "CopilotChat", "Skills", "OpenApiSkills/GitHubSkill/openapi.json"),
+				new OpenApiSkillExecutionParameters
+				{
+					AuthCallback = authenticationProvider.AuthenticateRequestAsync,
+				});
+		}
+
+		// Jira
+		if (!string.IsNullOrWhiteSpace(openApiSkillsAuthHeaders.JiraAuthentication))
+		{
+			log.LogInformation("Registering Jira Skill");
+			var authenticationProvider = new BasicAuthenticationProvider(() => { return Task.FromResult(openApiSkillsAuthHeaders.JiraAuthentication); });
+			var hasServerUrlOverride = variables.TryGetValue("jira-server-url", out var serverUrlOverride);
+
+			await planner.Kernel.ImportOpenApiSkillFromFileAsync(
+				skillName: "JiraSkill",
+				filePath: Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "CopilotChat", "Skills", "OpenApiSkills/JiraSkill/openapi.json"),
+				new OpenApiSkillExecutionParameters
+				{
+					AuthCallback = authenticationProvider.AuthenticateRequestAsync,
+					ServerUrlOverride = hasServerUrlOverride ? new Uri(serverUrlOverride!) : null,
+				});
+		}
+
+		// Microsoft Graph
+		if (!string.IsNullOrWhiteSpace(openApiSkillsAuthHeaders.GraphAuthentication))
+		{
+			log.LogInformation("Enabling Microsoft Graph skill(s).");
+			BearerAuthenticationProvider authenticationProvider = new(() => Task.FromResult(openApiSkillsAuthHeaders.GraphAuthentication));
+			var graphServiceClient = CreateGraphServiceClient(authenticationProvider.AuthenticateRequestAsync, log);
+
+			planner.Kernel.ImportSkill(new TaskListSkill(new MicrosoftToDoConnector(graphServiceClient)), "todo");
+			planner.Kernel.ImportSkill(new CalendarSkill(new OutlookCalendarConnector(graphServiceClient)), "calendar");
+			planner.Kernel.ImportSkill(new EmailSkill(new OutlookMailConnector(graphServiceClient)), "email");
+		}
+	}
+	/// <summary>
+	/// Create a Microsoft Graph service client.
+	/// </summary>
+	/// <param name="authenticateRequestAsyncDelegate">The delegate to authenticate the request.</param>
+	private GraphServiceClient CreateGraphServiceClient(AuthenticateRequestAsyncDelegate authenticateRequestAsyncDelegate, ILogger log)
+	{
+		MsGraphClientLoggingHandler graphLoggingHandler = new(log);
+
+		var graphMiddlewareHandlers =
+			GraphClientFactory.CreateDefaultHandlers(new DelegateAuthenticationProvider(authenticateRequestAsyncDelegate));
+		graphMiddlewareHandlers.Add(graphLoggingHandler);
+
+		var graphHttpClient = GraphClientFactory.Create(graphMiddlewareHandlers);
+		return new(graphHttpClient);
+	}
 }
