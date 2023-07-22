@@ -191,7 +191,7 @@ public class ChatSurface : ServerlessHub<IChatClient>
 	[Function("SendMessage")]
 	public Task SendMessage([SignalRTrigger(nameof(ChatSurface), "messages", "SendMessage", "chatId", "message")] SignalRInvocationContext invocationContext,
 		string chatId,
-		ChatMessage message,
+		SemanticKernel.Models.ChatMessage message,
 		FunctionContext functionContext)
 	{
 		return Clients.GroupExcept(chatId, new[] { invocationContext.ConnectionId }).ReceiveMessage(message, chatId);
