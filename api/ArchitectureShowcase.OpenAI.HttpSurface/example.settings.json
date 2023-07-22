@@ -42,7 +42,9 @@
         "Prompts__LongTermMemoryName": "LongTermMemory",
         "Prompts__LongTermMemoryExtraction": "Extract information that is encoded and consolidated from other memory types, such as working memory or sensory memory. It should be useful for maintaining and recalling one's personal identity, history, and knowledge over time.",
         "BotSchema__Name": "CopilotChat",
-        "BotSchema__Version": 1
+        "BotSchema__Version": 1,
+        "AzureSpeech__Region": "",
+        "AzureSpeech__Key": ""
     },
     "Host": {
         "CORS": "https://localhost:3000",
