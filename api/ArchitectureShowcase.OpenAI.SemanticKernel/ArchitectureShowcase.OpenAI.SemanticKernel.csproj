@@ -29,13 +29,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Plugins\EnterprisePublicDocuments\" />
     <Folder Include="Plugins\FinancialDocuments\" />
-    <Folder Include="Plugins\DeveloperCopilot\" />
-    <Folder Include="Plugins\DocumentManagement\" />
-    <Folder Include="Plugins\ConversationCoPilot\" />
     <Folder Include="Plugins\FinancialRelevancy\" />
-    <Folder Include="Plugins\SemanticChatMemory\" />
     <Folder Include="Plugins\ProactiveAssistance\" />
   </ItemGroup>
 

@@ -2,13 +2,14 @@
 
 using ArchitectureShowcase.OpenAI.SemanticKernel.Extensions;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Options;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.AI.TextCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using System.Globalization;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Models;
 
 /// <summary>
 /// Helper class to extract and create semantic memory from chat history.

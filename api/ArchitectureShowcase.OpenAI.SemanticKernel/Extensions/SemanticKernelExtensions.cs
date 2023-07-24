@@ -1,6 +1,6 @@
 ﻿using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Options;
-using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -77,7 +77,7 @@ public static class SemanticKernelExtensions
 
 
 	/// <summary>
-	/// Register the skills with the kernel.
+	/// Register the skills with the Copilot Chat kernel.
 	/// </summary>
 	private static Task RegisterKernelPluginsAsync(IServiceProvider sp, IKernel kernel)
 	{

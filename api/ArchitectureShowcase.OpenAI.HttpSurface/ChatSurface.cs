@@ -1,7 +1,7 @@
 ﻿using ArchitectureShowcase.OpenAI.HttpSurface.TypedHubClients;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins;
-using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 using ArchitectureShowcase.OpenAI.SemanticKernel.Storage;
 using Azure.Core.Serialization;
 using Microsoft.AspNetCore.Http;

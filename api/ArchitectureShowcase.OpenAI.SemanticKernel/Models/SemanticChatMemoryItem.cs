@@ -2,7 +2,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Models;
 
 /// <summary>
 /// A single entry in the chat memory.

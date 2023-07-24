@@ -2,5 +2,5 @@
 public enum PlanTypeEnum
 {
 	Action, // single-step
-	Sequential, // multi-step
+	Sequential // multi-step
 }

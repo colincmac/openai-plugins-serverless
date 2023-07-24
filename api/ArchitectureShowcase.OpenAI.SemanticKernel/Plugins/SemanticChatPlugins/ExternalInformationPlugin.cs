@@ -14,12 +14,12 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 
 /// <summary>
 /// skill provides the functions to acquire external information.
 /// </summary>
-public class ExternalInformationFunctions
+public class ExternalInformationPlugin
 {
 	/// <summary>
 	/// Prompt settings.
@@ -49,7 +49,7 @@ public class ExternalInformationFunctions
 	/// <summary>
 	/// Create a new instance of ExternalInformationSkill.
 	/// </summary>
-	public ExternalInformationFunctions(
+	public ExternalInformationPlugin(
 		IOptions<PromptsOptions> promptOptions,
 		ChatPlanner planner)
 	{

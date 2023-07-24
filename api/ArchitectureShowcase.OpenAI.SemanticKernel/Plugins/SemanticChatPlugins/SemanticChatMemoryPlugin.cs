@@ -1,15 +1,16 @@
-﻿using ArchitectureShowcase.OpenAI.SemanticKernel.Options;
+﻿using ArchitectureShowcase.OpenAI.SemanticKernel.Models;
+using ArchitectureShowcase.OpenAI.SemanticKernel.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.SkillDefinition;
 using System.ComponentModel;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 
 /// <summary>
 /// This skill provides the functions to query the semantic chat memory.
 /// </summary>
-public class SemanticChatMemoryFunctions
+public class SemanticChatMemoryPlugin
 {
 	/// <summary>
 	/// Prompt settings.
@@ -19,7 +20,7 @@ public class SemanticChatMemoryFunctions
 	/// <summary>
 	/// Create a new instance of SemanticChatMemorySkill.
 	/// </summary>
-	public SemanticChatMemoryFunctions(
+	public SemanticChatMemoryPlugin(
 		IOptions<PromptsOptions> promptOptions)
 	{
 		_promptOptions = promptOptions.Value;
@@ -43,13 +44,13 @@ public class SemanticChatMemoryFunctions
 
 		// Search for relevant memories.
 		List<MemoryQueryResult> relevantMemories = new();
-		foreach (var memoryName in this._promptOptions.MemoryMap.Keys)
+		foreach (var memoryName in _promptOptions.MemoryMap.Keys)
 		{
 			var results = textMemory.SearchAsync(
 				SemanticChatMemoryExtractor.MemoryCollectionName(chatId, memoryName),
 				query,
 				limit: 100,
-				minRelevanceScore: this._promptOptions.SemanticMemoryMinRelevance);
+				minRelevanceScore: _promptOptions.SemanticMemoryMinRelevance);
 			await foreach (var memory in results)
 			{
 				relevantMemories.Add(memory);

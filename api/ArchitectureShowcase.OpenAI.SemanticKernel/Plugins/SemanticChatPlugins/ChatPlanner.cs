@@ -3,7 +3,7 @@ using ArchitectureShowcase.OpenAI.SemanticKernel.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Planning;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 /// <summary>
 /// A lightweight wrapper around a planner to allow for curating which skills are available to it.
 /// </summary>

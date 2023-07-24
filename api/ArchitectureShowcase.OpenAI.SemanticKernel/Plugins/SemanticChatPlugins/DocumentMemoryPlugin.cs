@@ -6,12 +6,12 @@ using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.SkillDefinition;
 using System.ComponentModel;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 
 /// <summary>
 /// This skill provides the functions to query the document memory.
 /// </summary>
-public class DocumentMemoryFunctions
+public class DocumentMemoryPlugin
 {
 	/// <summary>
 	/// Prompt settings.
@@ -26,7 +26,7 @@ public class DocumentMemoryFunctions
 	/// <summary>
 	/// Create a new instance of DocumentMemorySkill.
 	/// </summary>
-	public DocumentMemoryFunctions(
+	public DocumentMemoryPlugin(
 		IOptions<PromptsOptions> promptOptions,
 		IOptions<DocumentMemoryOptions> documentImportOptions)
 	{
@@ -51,8 +51,8 @@ public class DocumentMemoryFunctions
 		// Search for relevant document snippets.
 		var documentCollections = new string[]
 		{
-			this._documentImportOptions.ChatDocumentCollectionNamePrefix + chatId,
-			this._documentImportOptions.GlobalDocumentCollectionName
+			_documentImportOptions.ChatDocumentCollectionNamePrefix + chatId,
+			_documentImportOptions.GlobalDocumentCollectionName
 		};
 
 		List<MemoryQueryResult> relevantMemories = new();
@@ -62,7 +62,7 @@ public class DocumentMemoryFunctions
 				documentCollection,
 				query,
 				limit: 100,
-				minRelevanceScore: this._promptOptions.DocumentMemoryMinRelevance);
+				minRelevanceScore: _promptOptions.DocumentMemoryMinRelevance);
 			await foreach (var memory in results)
 			{
 				relevantMemories.Add(memory);

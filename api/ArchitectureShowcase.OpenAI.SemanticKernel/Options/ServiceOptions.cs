@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Extensions;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Options;
 internal class ServiceOptions
 {
 	public const string PropertyName = "Service";

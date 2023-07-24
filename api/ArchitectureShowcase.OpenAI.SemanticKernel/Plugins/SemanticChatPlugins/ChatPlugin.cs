@@ -13,7 +13,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChat;
+namespace ArchitectureShowcase.OpenAI.SemanticKernel.Plugins.SemanticChatPlugins;
 public class ChatPlugin
 {
 	/// <summary>
@@ -40,17 +40,17 @@ public class ChatPlugin
 	/// <summary>
 	/// A semantic chat memory skill instance to query semantic memories.
 	/// </summary>
-	private readonly SemanticChatMemoryFunctions _semanticChatMemorySkill;
+	private readonly SemanticChatMemoryPlugin _semanticChatMemorySkill;
 
 	/// <summary>
 	/// A document memory skill instance to query document memories.
 	/// </summary>
-	private readonly DocumentMemoryFunctions _documentMemorySkill;
+	private readonly DocumentMemoryPlugin _documentMemorySkill;
 
 	/// <summary>
 	/// A skill instance to acquire external information.
 	/// </summary>
-	private readonly ExternalInformationFunctions _externalInformationSkill;
+	private readonly ExternalInformationPlugin _externalInformationSkill;
 
 	private readonly ILogger _log;
 
@@ -71,12 +71,12 @@ public class ChatPlugin
 		_chatSessionRepository = chatSessionRepository;
 		_promptOptions = promptOptions.Value;
 
-		_semanticChatMemorySkill = new SemanticChatMemoryFunctions(
+		_semanticChatMemorySkill = new SemanticChatMemoryPlugin(
 			promptOptions);
-		_documentMemorySkill = new DocumentMemoryFunctions(
+		_documentMemorySkill = new DocumentMemoryPlugin(
 			promptOptions,
 			documentImportOptions);
-		_externalInformationSkill = new ExternalInformationFunctions(
+		_externalInformationSkill = new ExternalInformationPlugin(
 			promptOptions,
 			planner);
 		_log = logger;
